@@ -172,7 +172,12 @@ compiler_flags_dictionaries['clang15-darwin'] = clang15_darwin_dict
 
 def fetch_git_revision_date ():
     cmd = ["git", "describe", "HEAD"]
-    output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE).communicate()[0].splitlines()
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).splitlines()
+    except subprocess.CalledProcessError as error:
+        print ("Cannot determine Ardour's version from Git tags. Use a full clone with Ardour release tags; see README.md.")
+        print (error.output.decode('utf-8', errors='replace').strip())
+        sys.exit (1)
     rev = re.sub(r"^[A-Za-z0-9]*\+", "", output[0].decode('utf-8'))
 
     cmd = ["git", "log", "-1", "--pretty=format:%ci", "HEAD"]
@@ -261,7 +266,7 @@ def set_version (from_file = False):
     global PROGRAM_VERSION
     global rev_date
 
-    if not from_file and os.path.isdir (os.path.join(os.getcwd(), '.git')):
+    if not from_file and os.path.exists (os.path.join(os.getcwd(), '.git')):
         rev, rev_date = fetch_git_revision_date()
     else:
         rev, rev_date = fetch_tarball_revision_date()

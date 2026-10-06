@@ -677,7 +677,7 @@ def build(bld):
         ]
     obj.install_path = bld.env['DLLDIR']
     obj.linkflags    = [ bld.env['compiler_flags_dict']['execstack'] ]
-    obj.uselib       = 'UUID FLAC FONTCONFIG GTHREAD OGG PANGOMM CURL DL CANVAS FFTW3F LO TAGLIB XML LILV RUBBERBAND AUBIO LRDF ARCHIVE VAMPSDK VAMPHOSTSDK GLIBMM GIOMM PANGOFT2 LIBPNG LIBJPEG'
+    obj.uselib       = 'UUID FLAC FONTCONFIG GTHREAD OGG PANGOMM CURL DL CANVAS FFTW3F LO TAGLIB XML LILV RUBBERBAND AUBIO LRDF ARCHIVE VAMPSDK VAMPHOSTSDK GLIBMM GIOMM PANGOFT2 LIBPNG LIBJPEG SNDFILE'
 
     if bld.env['build_target'] == 'msvc':
         obj.use += ['liblua']

@@ -400,7 +400,8 @@ def build(bld):
         obj.cflags       = [ bld.env['compiler_flags_dict']['pic'] ]
         obj.defines      = []
 
-    obj.export_includes = ['.']
+    # Public dsp_filter.h exposes FFTW types to engine consumers.
+    obj.export_includes = ['.'] + bld.env['INCLUDES_FFTW3F']
     obj.includes     = ['.', '../vst3/', '../ctrl-interface/control_protocol', '..']
     obj.name         = 'libardour'
     obj.target       = 'ardour'

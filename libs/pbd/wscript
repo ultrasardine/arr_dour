@@ -160,7 +160,8 @@ def build(bld):
     if bld.is_defined('DEBUG_RT_ALLOC'):
         obj.source += 'debug_rt_alloc.c'
 
-    obj.export_includes = ['.']
+    # Public file_archive.h includes libarchive headers.
+    obj.export_includes = ['.'] + bld.env['INCLUDES_ARCHIVE']
     obj.includes     = ['.']
     obj.name         = 'libpbd'
     obj.target       = 'pbd'

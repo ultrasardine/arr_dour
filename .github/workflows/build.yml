@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wrapper-tests:
+    name: Wrapper tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            filter: ''
+          - os: macos-latest
+            filter: ''
+          - os: windows-latest
+            filter: '-k PowerShellCommandsTest'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run wrapper tests
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest discover -s tools/tests -p 'test_dev_commands.py' -v ${{ matrix.filter }}
+
+  debian:
+    name: Debian 12 build
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+    timeout-minutes: 240
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates build-essential git python3 pkg-config gettext \
+            libboost-dev libglib2.0-dev libglibmm-2.4-dev libsigc++-2.0-dev \
+            libcairomm-1.0-dev libpangomm-1.4-dev libpango1.0-dev \
+            libpng-dev libjpeg-dev libxml2-dev libsndfile1-dev \
+            libcurl4-openssl-dev libarchive-dev liblo-dev libtag1-dev \
+            vamp-plugin-sdk librubberband-dev libsamplerate0-dev libfftw3-dev \
+            libflac-dev libogg-dev libaubio-dev liblrdf0-dev \
+            lv2-dev libserd-dev libsord-dev libsratom-dev liblilv-dev \
+            libasound2-dev libx11-dev libxext-dev libusb-1.0-0-dev
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch Ardour release tags
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git describe HEAD || git fetch --no-recurse-submodules https://github.com/Ardour/ardour.git 'refs/tags/*:refs/tags/*'
+          git describe HEAD
+      - name: Build
+        run: make build-debian JOBS="$(nproc)"
+      - name: Smoke test
+        run: ./gtk2_ardour/ardev --version
+
+  macos:
+    name: macOS build (Apple Silicon)
+    runs-on: macos-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch Ardour release tags
+        run: |
+          git describe HEAD || git fetch --no-recurse-submodules https://github.com/Ardour/ardour.git 'refs/tags/*:refs/tags/*'
+          git describe HEAD
+      - name: Install dependencies
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: make deps-osx
+      - name: Build
+        run: make build-osx JOBS="$(sysctl -n hw.ncpu)"
+      - name: Smoke test
+        run: sh tools/macos/build-env.sh ./gtk2_ardour/ardev --version
